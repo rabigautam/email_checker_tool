@@ -1,11 +1,62 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-
+	"log"
+	"net"
+	"os"
+	"strings"
 )
 
 func main() {
-	fmt.Println("domain , hasMax, hasSPF, sprRecord, hasDMARC, dmarcRecord")
+	fmt.Println("enter the mail address to be checked")
+	scanner := bufio.NewScanner(os.Stdin)
 
+	fmt.Printf("domain , hasMx, hasSPF, spfRecord, hasDMARC, dmarcRecord \n")
+	for scanner.Scan() {
+		checkDoamin(scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatal("Error:Could not read from input")
+	}
+}
+func checkDoamin(domain string) {
+	var hasMx, hasSPF, hasDMARC bool
+	var spfRecord, dmarcRecord string
+
+	mxRecords, err := net.LookupMX(domain)
+	if err != nil {
+		log.Printf("%v", err)
+	}
+
+	if len(mxRecords) > 0 {
+		hasMx = true
+	}
+	txtRecords, err := net.LookupTXT(domain)
+	if err != nil {
+		log.Printf("%v", err)
+	}
+	for _,record:=range txtRecords{
+		if strings.HasPrefix(record,"v=spf1"){
+			hasSPF=true
+			spfRecord=record
+			break
+		}
+	}
+
+	dmarcRecords,err:=net.LookupTXT("_dmarc."+domain)
+	if err != nil {
+		log.Printf("%v", err)
+	}
+	for _,record := range dmarcRecords{
+		if strings.HasPrefix(record,"v=DMARC1"){
+			hasDMARC=true
+			dmarcRecord=record
+			break
+		}
+
+	}
+
+	fmt.Printf("\n %v,%v,%v,%v,%v,%v",domain,hasMx, hasSPF, spfRecord, hasDMARC, dmarcRecord)
 }
